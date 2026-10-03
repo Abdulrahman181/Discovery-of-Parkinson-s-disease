@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install project and check tools
+        run: python -m pip install --disable-pip-version-check -e '.[test]'
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Lint
+        run: ruff check src tests
+      - name: Compile Python
+        run: python -m compileall -q src tests
+      - name: Validate notebook structure and output hygiene
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          notebook = json.loads(Path("Parkinson.ipynb").read_text(encoding="utf-8"))
+          assert notebook["nbformat"] == 4
+          for cell in notebook["cells"]:
+              if cell["cell_type"] == "code":
+                  assert cell["execution_count"] is None
+                  assert cell["outputs"] == []
+          PY
