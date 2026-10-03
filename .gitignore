@@ -1,0 +1,16 @@
+# Private data and local manifests
+/data/
+*.keras
+*.h5
+/artifacts/
+manifest.csv
+
+# Python environments and generated files
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.egg-info/
