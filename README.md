@@ -1,27 +1,63 @@
-# Parkinson Disease Image Classification
+# Parkinson disease image classification
 
-This repository contains a reproducible machine-learning notebook for **Parkinson Disease Image Classification**.
+This repository contains a reproducible TensorFlow notebook for a **binary image-classification experiment**. It is an educational/research artifact, not a clinical or production decision system.
 
-## Data
+## Dataset contract
 
-The dataset is intentionally not committed because of size/licensing constraints. Required input: Parkinson dataset with `train images/` and `test images/`.
+The dataset is intentionally not committed because of size/licensing constraints. The notebook requires this layout:
 
-Set the environment variable `PARKINSON_ROOT` to the local dataset path before running the notebook. The notebook defaults to a `data/` path for local execution.
+```text
+<PARKINSON_ROOT>/
+├── train images/
+│   ├── control/
+│   └── pd/
+└── test images/
+    ├── control/
+    └── pd/
+```
+
+Class directories are discovered and sorted by name; the same order is used for labels and reports. The notebook fails early with a clear error if the root, split directories, or exactly two matching class directories are absent.
+
+Set `PARKINSON_ROOT` to the directory containing `train images/` and `test images/`:
+
+```bash
+export PARKINSON_ROOT=/absolute/path/to/dataset
+```
+
+If the dataset is unavailable, **no training or metric claim can be made**. Do not replace the missing data with invented or synthetic results.
 
 ## Run
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-export PARKINSON_ROOT=/absolute/path/to/data
-jupyter notebook
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+export PARKINSON_ROOT=/absolute/path/to/dataset
+jupyter notebook Parkinson.ipynb
 ```
 
-Run cells from top to bottom. Generated models and caches should remain local and are excluded from version control.
+The default run uses `MobileNetV2` with `PARKINSON_WEIGHTS=none`, so it does not implicitly download ImageNet weights. Optional configuration:
 
-## Limitations and cautions
+```bash
+PARKINSON_BACKBONE=EfficientNetB0 PARKINSON_WEIGHTS=imagenet PARKINSON_EPOCHS=5 jupyter notebook Parkinson.ipynb
+```
 
-- Reported metrics depend on the dataset split, random seed, preprocessing, and library versions.
-- These notebooks are educational/research artifacts, not production or medical decision systems.
-- Validate data schema and class balance before training; do not interpret predictions as professional advice.
+Generated models are written to `artifacts/` and ignored by Git. Use the cells from top to bottom. The notebook uses the same seed for the training/validation split, keeps the test loader unshuffled, and evaluates only the best validation-loss checkpoint.
+
+## Static validation
+
+Run the dependency-light checker before committing notebook edits:
+
+```bash
+python validate_notebook.py
+```
+
+It validates notebook JSON, code-cell syntax, portable dataset paths, the shared train/validation split seed, deterministic test ordering, and safe metric-report configuration. It does not train a model.
+
+## Reproducibility and limitations
+
+- `SEED=1337` seeds Python, NumPy, and TensorFlow, and TensorFlow deterministic operations are requested where supported. Exact results can still vary with hardware and library versions.
+- The split is image-directory based. Patient-level independence and duplicate-person leakage cannot be verified without patient identifiers; use a group-aware split when those identifiers are available.
+- The held-out test directory is not used for fitting or model selection.
+- Reported metrics are produced only by running the notebook on a real, correctly structured dataset. They are not medical advice or evidence of clinical validity.

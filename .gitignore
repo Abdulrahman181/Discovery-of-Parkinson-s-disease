@@ -1,9 +1,13 @@
 data/
+artifacts/
 *.h5
 *.keras
 *.pkl
 *.pickle
 *.joblib
+*.log
 __pycache__/
 .ipynb_checkpoints/
 .venv/
+.pytest_cache/
+.ruff_cache/
