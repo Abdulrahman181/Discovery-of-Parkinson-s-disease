@@ -62,3 +62,34 @@ All checks were run in the Sandbox against the local working tree:
 ## Commit policy
 
 A local commit is created after validation. No changes are pushed to GitHub, and no other repository is modified.
+
+## Second Senior Review
+
+**Review date:** 2026-10-15
+**Scope:** all tracked files, the complete notebook JSON and code cells, repository history/status/diff, configuration, dependency declaration, and static validation support.
+
+### Additional findings and fixes
+
+| Severity | Finding | Remediation |
+|---|---|---|
+| High | Raw `image_dataset_from_directory` pixels were sent directly to every backbone. This violates the expected input contract for ImageNet backbones and makes the optional pretrained mode unreliable. | Added an explicit matching Keras application preprocessor for every supported backbone. ImageNet mode now freezes the convolutional base; scratch mode remains trainable. |
+| High | `artifacts/best_model.keras` could be left over from a previous experiment, and the evaluation cell did not explicitly verify that the current fit produced a checkpoint. | The training cell removes the prior checkpoint before fitting; evaluation checks `best_model_path.is_file()` before loading. Output location is configurable through `PARKINSON_ARTIFACT_DIR`. |
+| Medium | Empty class directories were left to fail later inside TensorFlow with a less actionable error. | Added supported-image counting for both splits and a clear early error naming each empty class. |
+| Medium | The static checker did not enforce clean execution state or the newly required model/artifact contracts. | Extended `validate_notebook.py` to reject non-empty outputs/non-null execution counts and to check preprocessing, image validation, configurable artifacts, stale-checkpoint cleanup, and checkpoint existence. |
+
+### Second-review validation
+
+- `python3 validate_notebook.py` — passed after the hardening changes.
+- `python3 -m py_compile validate_notebook.py` — passed.
+- `python3 -m json.tool Parkinson.ipynb` — passed.
+- AST parsing of every notebook code cell — passed.
+- `git diff --check` — passed.
+- Notebook inspection confirmed six code cells with `execution_count: null` and empty `outputs`, matching train/validation seeds and split fractions, unshuffled test data, model-specific preprocessing, and no fabricated metrics.
+- No end-to-end training was run: the repository intentionally contains no dataset, and TensorFlow/scikit-learn are not installed in this audit environment. No accuracy, loss, AUC, or clinical claim is made.
+
+### Remaining risks
+
+- Patient-level independence, duplicate images, and any subject leakage remain unverifiable without patient identifiers and metadata; a group-aware split is still required where identifiers exist.
+- The split remains directory/image based and is not stratified by patient. Very small or imbalanced datasets may produce unstable validation estimates.
+- Exact numerical reproducibility can still vary by TensorFlow version, CPU/GPU kernels, hardware, and optional ImageNet weight downloads.
+- No runtime artifact compatibility test could be performed without TensorFlow and a real dataset; checkpoint loading is guarded but not empirically exercised here.

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Static validation for the Parkinson notebook.
 
-This intentionally does not import TensorFlow or access the dataset.  It catches
-malformed notebook JSON, Python syntax errors, stale literal paths, and the
-most important train/validation split invariants in a lightweight environment.
+This intentionally does not import TensorFlow or access the dataset. It catches
+malformed notebook JSON, Python syntax errors, stale literal paths, dirty
+notebook state, and the important data/evaluation invariants in a lightweight
+environment.
 """
 from __future__ import annotations
 
@@ -39,6 +40,10 @@ def main() -> int:
         if cell.get("cell_type") == "code":
             if not isinstance(cell.get("outputs"), list):
                 fail(f"code cell {index} has invalid outputs")
+            if cell["outputs"]:
+                fail(f"code cell {index} contains stale outputs")
+            if cell.get("execution_count") is not None:
+                fail(f"code cell {index} has a non-null execution count")
             source = "".join(cell.get("source", []))
             try:
                 ast.parse(source, filename=f"Parkinson.ipynb[cell {index}]")
@@ -58,6 +63,10 @@ def main() -> int:
 
     if 'os.environ.get("PARKINSON_ROOT"' not in combined:
         fail("dataset root must be configurable through PARKINSON_ROOT")
+    if 'PARKINSON_ARTIFACT_DIR' not in combined:
+        fail("artifact output must be configurable through PARKINSON_ARTIFACT_DIR")
+    if "SUPPORTED_IMAGE_EXTENSIONS" not in combined or "empty_classes" not in combined:
+        fail("train/test class directories must be checked for supported images")
     if combined.count("validation_split=VALIDATION_SPLIT") < 2:
         fail("training and validation loaders must use the same validation split")
     if combined.count("seed=SEED") < 2:
@@ -66,6 +75,12 @@ def main() -> int:
         fail("test loader must disable shuffling for reproducible evaluation")
     if "callbacks=callbacks" not in combined:
         fail("fit must pass callbacks as a flat callback list")
+    if "PREPROCESSORS[MODEL_NAME]" not in combined:
+        fail("the selected backbone must receive its matching preprocessing function")
+    if "base_model.trainable = WEIGHTS == \"none\"" not in combined:
+        fail("ImageNet transfer-learning mode must freeze the convolutional base")
+    if "best_model_path.unlink()" not in combined or "best_model_path.is_file()" not in combined:
+        fail("checkpoint loading must not reuse a stale artifact and must verify creation")
     if "classification_report" not in combined or "zero_division=0" not in combined:
         fail("evaluation must produce a safe classification report")
 

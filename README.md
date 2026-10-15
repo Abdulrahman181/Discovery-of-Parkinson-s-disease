@@ -43,7 +43,9 @@ The default run uses `MobileNetV2` with `PARKINSON_WEIGHTS=none`, so it does not
 PARKINSON_BACKBONE=EfficientNetB0 PARKINSON_WEIGHTS=imagenet PARKINSON_EPOCHS=5 jupyter notebook Parkinson.ipynb
 ```
 
-Generated models are written to `artifacts/` and ignored by Git. Use the cells from top to bottom. The notebook uses the same seed for the training/validation split, keeps the test loader unshuffled, and evaluates only the best validation-loss checkpoint.
+Run Jupyter from the repository root so the default relative paths resolve as documented. Generated models are written to `artifacts/` and ignored by Git; set `PARKINSON_ARTIFACT_DIR` when a different output location is required. Use the cells from top to bottom. The notebook validates that every class has at least one supported image (`.bmp`, `.gif`, `.jpeg`, `.jpg`, or `.png`), uses the same seed for the training/validation split, keeps the test loader unshuffled, and evaluates only the checkpoint produced by the current run.
+
+The selected backbone applies its matching `tf.keras.applications` preprocessing function. With `PARKINSON_WEIGHTS=imagenet`, the convolutional base is frozen for this baseline; with `PARKINSON_WEIGHTS=none`, it is trained from scratch. The default `none` mode avoids any implicit network download.
 
 ## Static validation
 
@@ -53,7 +55,7 @@ Run the dependency-light checker before committing notebook edits:
 python validate_notebook.py
 ```
 
-It validates notebook JSON, code-cell syntax, portable dataset paths, the shared train/validation split seed, deterministic test ordering, and safe metric-report configuration. It does not train a model.
+It validates notebook JSON, code-cell syntax, clean notebook state (no outputs or execution counts), configurable paths, non-stale checkpoint handling, model-specific preprocessing, the shared train/validation split seed, deterministic test ordering, and safe metric-report configuration. It does not train a model.
 
 ## Reproducibility and limitations
 
